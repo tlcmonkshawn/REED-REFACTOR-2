@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:frontend/services/gemini_live_service.dart';
-import 'package:provider/provider.dart';
-import 'package:frontend/providers/auth_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter_sound/flutter_sound.dart';
 
 class CallScreen extends StatefulWidget {
   const CallScreen({super.key});
@@ -14,86 +10,53 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-  CameraController? _cameraController;
-  late GeminiLiveService _geminiLiveService;
-  bool _isCameraInitialized = false;
-  bool _isRecording = false;
-  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  String _transcription = '';
+  late final GeminiLiveService _geminiLiveService;
+  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  bool _inCall = false;
 
   @override
   void initState() {
     super.initState();
-    _initialize();
+    _geminiLiveService = GeminiLiveService(onAddStream: _onAddStream);
+    _initRenderers();
   }
 
-  Future<void> _initialize() async {
-    await _initializeCamera();
-    await _initializeAudio();
-    final authToken = context.read<AuthProvider>().token;
-    _geminiLiveService = GeminiLiveService(authToken: authToken);
+  void _initRenderers() async {
+    await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
   }
 
-  Future<void> _initializeCamera() async {
-    final cameras = await availableCameras();
-    final firstCamera = cameras.first;
-    _cameraController = CameraController(firstCamera, ResolutionPreset.medium);
-    await _cameraController!.initialize();
-    if (!mounted) return;
-    setState(() {
-      _isCameraInitialized = true;
-    });
+  void _onAddStream(MediaStream stream) {
+    _remoteRenderer.srcObject = stream;
+    setState(() {});
   }
 
-  Future<void> _initializeAudio() async {
-    await _recorder.openRecorder();
-  }
-
-  void _toggleRecording() {
-    if (_isRecording) {
-      _stopRecording();
+  void _toggleCall() {
+    if (_inCall) {
+      _geminiLiveService.dispose();
+      _localRenderer.srcObject = null;
+      _remoteRenderer.srcObject = null;
     } else {
-      _startRecording();
-    }
-  }
-
-  Future<void> _startRecording() async {
-    await Permission.microphone.request();
-    _geminiLiveService.connect((transcription) {
-      setState(() {
-        _transcription = transcription;
+      _geminiLiveService.start().then((_) {
+        _localRenderer.srcObject = _geminiLiveService._localStream;
       });
-    });
-
-    await _recorder.startRecorder(
-      toStream: _geminiLiveService.sendAudio, // This is conceptual and needs a stream adapter
-      codec: Codec.pcm16,
-    );
-
+    }
     setState(() {
-      _isRecording = true;
-    });
-  }
-
-  Future<void> _stopRecording() async {
-    await _recorder.stopRecorder();
-    _geminiLiveService.close();
-    setState(() {
-      _isRecording = false;
+      _inCall = !_inCall;
     });
   }
 
   @override
   void dispose() {
-    _cameraController?.dispose();
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
+    _geminiLiveService.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isCameraInitialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
     return Scaffold(
       appBar: AppBar(title: const Text('Live Scanner')),
       body: Column(
@@ -101,19 +64,14 @@ class _CallScreenState extends State<CallScreen> {
           Expanded(
             child: Stack(
               children: [
-                CameraPreview(_cameraController!),
+                RTCVideoView(_localRenderer, mirror: true),
                 Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(12.0),
-                    color: Colors.black.withOpacity(0.5),
-                    child: Text(
-                      _transcription,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
+                  right: 20,
+                  top: 20,
+                  child: SizedBox(
+                    width: 120,
+                    height: 160,
+                    child: RTCVideoView(_remoteRenderer),
                   ),
                 ),
               ],
@@ -122,8 +80,8 @@ class _CallScreenState extends State<CallScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: FloatingActionButton(
-              onPressed: _toggleRecording,
-              child: Icon(_isRecording ? Icons.mic_off : Icons.mic),
+              onPressed: _toggleCall,
+              child: Icon(_inCall ? Icons.call_end : Icons.call),
             ),
           ),
         ],

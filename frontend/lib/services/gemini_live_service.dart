@@ -1,49 +1,81 @@
-import 'package:frontend/services/api_service.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'dart:convert';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class GeminiLiveService {
-  final String? authToken;
-  final ApiService _apiService = ApiService();
-  WebSocketChannel? _channel;
+  RTCPeerConnection? _peerConnection;
+  MediaStream? _localStream;
+  final Function(MediaStream) onAddStream;
+  late IO.Socket _socket;
 
-  GeminiLiveService({this.authToken});
-
-  Future<String?> getSessionToken() async {
-    if (authToken == null) {
-      throw Exception('Auth token not provided');
-    }
-    _apiService.setAuthToken(authToken!);
-    final response = await _apiService.post('/gemini/session-token');
-
-    if (response.statusCode == 200) {
-      // Assuming the backend will eventually return a session token
-      // return response.data['sessionToken'];
-      print(response.data['msg']);
-      return "simulated-token"; // Placeholder
-    } else {
-      throw Exception('Failed to get session token');
-    }
+  GeminiLiveService({required this.onAddStream}) {
+    _socket = IO.io('https://reed-refactor-2.onrender.com', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': false,
+    });
+    _connectSocket();
   }
 
-  void connect(Function(String) onMessageReceived) {
-    // The Gemini Live API URL will be provided by Google
-    // This is a placeholder URL
-    final uri = Uri.parse('wss://your-gemini-live-api-endpoint.googleapis.com');
-    _channel = WebSocketChannel.connect(uri);
+  void _connectSocket() {
+    _socket.connect();
+    _socket.on('connect', (_) {
+      print('socket connected');
+    });
 
-    _channel!.stream.listen((message) {
-      final decodedMessage = jsonDecode(message);
-      // Assuming the transcription is in a 'text' field
-      onMessageReceived(decodedMessage['text'] ?? '');
+    _socket.on('webrtc_offer', (data) async {
+      await _peerConnection?.setRemoteDescription(RTCSessionDescription(data['sdp'], data['type']));
+      RTCSessionDescription answer = await _peerConnection!.createAnswer();
+      await _peerConnection!.setLocalDescription(answer);
+      _socket.emit('webrtc_answer', {'sdp': answer.sdp, 'type': answer.type});
+    });
+
+    _socket.on('webrtc_answer', (data) {
+      _peerConnection?.setRemoteDescription(RTCSessionDescription(data['sdp'], data['type']));
+    });
+
+    _socket.on('webrtc_ice_candidate', (data) {
+      _peerConnection?.addCandidate(RTCIceCandidate(data['candidate'], data['sdpMid'], data['sdpMLineIndex']));
     });
   }
 
-  void sendAudio(List<int> audioData) {
-    _channel?.sink.add(audioData);
+  Future<void> start() async {
+    final Map<String, dynamic> configuration = {
+      'iceServers': [
+        {'url': 'stun:stun.l.google.com:19302'},
+      ]
+    };
+    _peerConnection = await createPeerConnection(configuration);
+
+    _localStream = await navigator.mediaDevices.getUserMedia({
+      'audio': true,
+      'video': true,
+    });
+
+    _localStream!.getTracks().forEach((track) {
+      _peerConnection!.addTrack(track, _localStream!);
+    });
+
+    _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
+      _socket.emit('webrtc_ice_candidate', {
+        'candidate': candidate.candidate,
+        'sdpMid': candidate.sdpMid,
+        'sdpMLineIndex': candidate.sdpMLineIndex,
+      });
+    };
+
+    _peerConnection!.onTrack = (RTCTrackEvent event) {
+      if (event.streams.isNotEmpty) {
+        onAddStream(event.streams[0]);
+      }
+    };
+
+    RTCSessionDescription offer = await _peerConnection!.createOffer();
+    await _peerConnection!.setLocalDescription(offer);
+    _socket.emit('webrtc_offer', {'sdp': offer.sdp, 'type': offer.type});
   }
 
-  void close() {
-    _channel?.sink.close();
+  void dispose() {
+    _socket.disconnect();
+    _peerConnection?.close();
+    _localStream?.dispose();
   }
 }
