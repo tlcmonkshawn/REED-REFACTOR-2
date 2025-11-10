@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_sound/flutter_sound.dart';
@@ -20,12 +21,21 @@ class _CallScreenState extends State<CallScreen> {
   bool _isInitialized = false;
   bool _isRecording = false;
   String _transcription = '';
+  StreamSubscription? _recorderSubscription;
+  final StreamController<List<int>> _audioStreamController = StreamController<List<int>>();
 
   @override
   void initState() {
     super.initState();
     _geminiLiveService = GeminiLiveService(apiService: context.read<AuthProvider>().authService.apiService);
     _init();
+
+    // Listen to the audio stream and send data to Gemini
+    _recorderSubscription = _audioStreamController.stream.listen((buffer) {
+      if (_isRecording) {
+        _geminiLiveService.sendAudio(buffer);
+      }
+    });
   }
 
   Future<void> _init() async {
@@ -54,13 +64,12 @@ class _CallScreenState extends State<CallScreen> {
           setState(() => _transcription += transcript);
         },
       );
-      // This is a conceptual implementation of streaming audio.
-      // A more robust solution would use a stream adapter.
+      
       await _recorder.startRecorder(
         codec: Codec.pcm16,
-        toStream: (buffer) {
-          _geminiLiveService.sendAudio(buffer);
-        },
+        toStream: _audioStreamController.sink,
+        sampleRate: 16000,
+        numChannels: 1,
       );
       setState(() => _isRecording = true);
     }
@@ -71,6 +80,8 @@ class _CallScreenState extends State<CallScreen> {
     _cameraController?.dispose();
     _recorder.closeRecorder();
     _geminiLiveService.disconnect();
+    _recorderSubscription?.cancel();
+    _audioStreamController.close();
     super.dispose();
   }
 
