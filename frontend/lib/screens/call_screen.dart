@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data'; // Import dart:typed_data
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_sound/flutter_sound.dart';
@@ -22,7 +23,7 @@ class _CallScreenState extends State<CallScreen> {
   bool _isRecording = false;
   String _transcription = '';
   StreamSubscription? _recorderSubscription;
-  final StreamController<List<int>> _audioStreamController = StreamController<List<int>>();
+  final StreamController<Uint8List> _audioStreamController = StreamController<Uint8List>(); // Use Uint8List
 
   @override
   void initState() {
