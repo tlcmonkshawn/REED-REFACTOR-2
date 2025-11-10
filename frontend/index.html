@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Live - Audio, Video & Text</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .auth-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+
+        .auth-section h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .call-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .call-controls button {
+            flex: 1;
+        }
+
+        .btn-start {
+            background: #10b981;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            background: #059669;
+        }
+
+        .btn-stop {
+            background: #ef4444;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status.connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.disconnected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status.connecting {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.idle {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .token-display {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+
+        .video-container {
+            margin: 20px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            position: relative;
+        }
+
+        #videoPreview {
+            width: 100%;
+            max-height: 400px;
+            display: block;
+        }
+
+        .text-input-section {
+            margin-top: 20px;
+        }
+
+        .text-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .text-input-group input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .text-input-group button {
+            width: auto;
+            min-width: 100px;
+            margin-top: 0;
+        }
+
+        .messages {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .message {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        .message.user {
+            background: #e3f2fd;
+            text-align: right;
+        }
+
+        .message.assistant {
+            background: #f1f8e9;
+        }
+
+        .message.system {
+            background: #fff3e0;
+            font-style: italic;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Gemini Live</h1>
+        <p class="subtitle">Real-time audio, video & text conversation with Gemini AI</p>
+
+        <!-- Authentication Section -->
+        <div class="auth-section" id="authSection">
+            <h2>Authentication</h2>
+            <input type="text" id="usernameInput" placeholder="Username" value="testuser">
+            <input type="password" id="passwordInput" placeholder="Password" value="test123">
+            <button id="loginBtn" onclick="handleLogin()">Login</button>
+            <div class="token-display hidden" id="tokenDisplay"></div>
+        </div>
+
+        <!-- Call Controls -->
+        <div id="callSection" class="hidden">
+            <!-- Video Preview -->
+            <div class="video-container">
+                <video id="videoPreview" autoplay playsinline muted></video>
+            </div>
+
+            <div class="call-controls">
+                <button id="startBtn" class="btn-start" onclick="startCall()">Start Call</button>
+                <button id="stopBtn" class="btn-stop" onclick="stopCall()" disabled>Stop Call</button>
+            </div>
+
+            <!-- Text Input -->
+            <div class="text-input-section">
+                <div class="text-input-group">
+                    <input type="text" id="textInput" placeholder="Type a message..." onkeypress="handleTextKeyPress(event)">
+                    <button id="sendTextBtn" onclick="sendTextMessage()" disabled>Send</button>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div id="messages" class="messages hidden"></div>
+
+            <div id="status" class="status idle">Ready to connect</div>
+            <div id="error" class="error hidden"></div>
+        </div>
+    </div>
+
+    <!-- Load Gemini SDK from CDN -->
+    <script type="module">
+        import { GoogleGenAI } from 'https://cdn.jsdelivr.net/npm/@google/genai@latest/dist/web/index.mjs';
+
+        // Global variables
+        let authToken = null;
+        let geminiSession = null;
+        let inputAudioContext = null;
+        let outputAudioContext = null;
+        let mediaStream = null;
+        let mediaStreamSource = null;
+        let scriptProcessor = null;
+        let isMuted = false;
+        let videoTrack = null;
+        let videoFrameInterval = null;
+        let videoCanvas = null;
+        let videoContext = null;
+
+        // Audio configuration
+        const INPUT_SAMPLE_RATE = 16000;
+        const OUTPUT_SAMPLE_RATE = 24000;
+
+        // Initialize Gemini AI
+        let ai = null;
+
+        // Login function
+        window.handleLogin = async function() {
+            const username = document.getElementById('usernameInput').value;
+            const password = document.getElementById('passwordInput').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorDiv = document.getElementById('error');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            errorDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.msg || 'Login failed');
+                }
+
+                authToken = data.token;
+                document.getElementById('tokenDisplay').textContent = `Token: ${authToken.substring(0, 20)}...`;
+                document.getElementById('tokenDisplay').classList.remove('hidden');
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('callSection').classList.remove('hidden');
+
+                // Initialize Gemini AI with API key from backend
+                await initializeGemini();
+            } catch (error) {
+                errorDiv.textContent = `Login error: ${error.message}`;
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        };
+
+        // Initialize Gemini AI
+        async function initializeGemini() {
+            try {
+                // Get session token from backend
+                const response = await fetch('/api/v1/gemini/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-auth-token': authToken,
+                    },
+                });
+
+                const sessionData = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(sessionData.msg || 'Failed to get session token');
+                }
+
+                // Initialize Gemini AI with the API key
+                ai = new GoogleGenAI({
+                    apiKey: sessionData.session_token,
+                    httpOptions: { apiVersion: "v1alpha" }
+                });
+
+                updateStatus('Ready to connect', 'idle');
+            } catch (error) {
+                showError(`Initialization error: ${error.message}`);
+            }
+        }
+
+        // Start audio call
+        window.startCall = async function() {
+            if (!ai) {
+                showError('Gemini AI not initialized. Please login again.');
+                return;
+            }
+
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const errorDiv = document.getElementById('error');
+
+            startBtn.disabled = true;
+            errorDiv.classList.add('hidden');
+            updateStatus('Connecting...', 'connecting');
+
+            try {
+                // Request microphone and camera access
+                mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: INPUT_SAMPLE_RATE,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                    },
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    }
+                });
+
+                // Create audio contexts
+                inputAudioContext = new (window.AudioContext || window.webkitAudioContext)({ 
+                    sampleRate: INPUT_SAMPLE_RATE 
+                });
+                outputAudioContext = new (window.AudioContext || window.webkitAudioContext)({ 
+                    sampleRate: OUTPUT_SAMPLE_RATE 
+                });
+
+                // Get video track from the media stream
+                videoTrack = mediaStream.getVideoTracks()[0];
+                const videoPreview = document.getElementById('videoPreview');
+                videoPreview.srcObject = mediaStream;
+
+                // Create canvas for video frame capture
+                videoCanvas = document.createElement('canvas');
+                videoCanvas.width = 640;
+                videoCanvas.height = 480;
+                videoContext = videoCanvas.getContext('2d');
+
+                // Connect to Gemini Live API
+                // Using gemini-2.5-flash-native-audio-preview-09-2025 (official Live API model)
+                geminiSession = await ai.live.connect({
+                    model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                    config: {
+                        responseModalities: ['AUDIO', 'TEXT'],
+                        enableAffectiveDialog: true,
+                        proactivity: {
+                            proactiveAudio: true
+                        }
+                    },
+                    callbacks: {
+                        onopen: () => {
+                            updateStatus('Connected - Speak, show video, or type!', 'connected');
+                            startBtn.disabled = true;
+                            stopBtn.disabled = false;
+                            document.getElementById('sendTextBtn').disabled = false;
+                            document.getElementById('textInput').disabled = false;
+                            document.getElementById('messages').classList.remove('hidden');
+                            setupAudioStreaming();
+                            setupVideoStreaming();
+                            addMessage('system', 'Connected to Gemini. You can speak, show video, or type messages.');
+                        },
+                        onmessage: handleMessage,
+                        onerror: (error) => {
+                            console.error('Connection error:', error);
+                            showError(`Connection error: ${error.message || 'Unknown error'}. Connection will remain open.`);
+                            // Don't auto-disconnect - let user decide
+                        },
+                        onclose: () => {
+                            updateStatus('Connection closed', 'disconnected');
+                            // Only cleanup if user didn't already stop
+                            if (geminiSession) {
+                                stopCall();
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                showError(`Failed to start call: ${error.message}`);
+                updateStatus('Connection failed', 'disconnected');
+                startBtn.disabled = false;
+            }
+        };
+
+        // Setup audio streaming
+        function setupAudioStreaming() {
+            if (!mediaStream || !inputAudioContext) return;
+
+            mediaStreamSource = inputAudioContext.createMediaStreamSource(mediaStream);
+            scriptProcessor = inputAudioContext.createScriptProcessor(4096, 1, 1);
+
+            scriptProcessor.onaudioprocess = async (audioProcessingEvent) => {
+                if (isMuted || !geminiSession) return;
+
+                const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                const pcmBlob = createPCMBlob(inputData);
+
+                try {
+                    // Send audio in official format: audio/pcm;rate=16000
+                    // JavaScript SDK accepts Blob with proper mime type
+                    await geminiSession.sendRealtimeInput({ media: pcmBlob });
+                } catch (error) {
+                    console.error('Error sending audio:', error);
+                }
+            };
+
+            mediaStreamSource.connect(scriptProcessor);
+            scriptProcessor.connect(inputAudioContext.destination);
+        }
+
+        // Setup video streaming - capture and send frames in real-time
+        function setupVideoStreaming() {
+            if (!videoTrack || !videoCanvas || !videoContext || !geminiSession) return;
+
+            // Send video frames at higher rate for smoother streaming (10 fps = 100ms)
+            // This creates a more "live" experience, though still discrete frames
+            videoFrameInterval = setInterval(async () => {
+                if (!geminiSession || !videoPreview) return;
+
+                try {
+                    // Draw current video frame to canvas
+                    videoContext.drawImage(videoPreview, 0, 0, videoCanvas.width, videoCanvas.height);
+                    
+                    // Convert canvas to JPEG blob
+                    videoCanvas.toBlob(async (blob) => {
+                        if (!blob || !geminiSession) return;
+
+                        // Convert blob to base64
+                        const reader = new FileReader();
+                        reader.onloadend = async () => {
+                            const base64Data = reader.result.split(',')[1]; // Remove data:image/jpeg;base64, prefix
+                            
+                            try {
+                                // Send video frame using media format (same as audio) for real-time streaming
+                                // This is the proper format for live video frames in Gemini Live API
+                                await geminiSession.sendRealtimeInput({
+                                    media: {
+                                        data: base64Data,
+                                        mimeType: 'image/jpeg'
+                                    }
+                                });
+                            } catch (error) {
+                                console.error('Error sending video frame:', error);
+                            }
+                        };
+                        reader.readAsDataURL(blob);
+                    }, 'image/jpeg', 0.85); // 85% quality for better balance
+                } catch (error) {
+                    console.error('Error capturing video frame:', error);
+                }
+            }, 100); // Send frame every 100ms (10 fps) for smoother streaming
+        }
+
+        // Create PCM blob from audio data
+        // Format: 16-bit PCM, 16kHz, mono (little-endian) per official Live API docs
+        function createPCMBlob(audioData) {
+            const buffer = new ArrayBuffer(audioData.length * 2);
+            const view = new DataView(buffer);
+            
+            for (let i = 0; i < audioData.length; i++) {
+                const sample = Math.max(-1, Math.min(1, audioData[i]));
+                view.setInt16(i * 2, sample * 0x7FFF, true); // little-endian
+            }
+
+            // Official format: audio/pcm;rate=16000
+            return new Blob([buffer], { type: 'audio/pcm;rate=16000' });
+        }
+
+        // Handle messages from Gemini
+        async function handleMessage(message) {
+            if (message.serverContent?.modelTurn?.parts) {
+                let textResponse = '';
+                
+                for (const part of message.serverContent.modelTurn.parts) {
+                    if (part.inlineData?.mimeType === 'audio/pcm' && part.inlineData?.data) {
+                        // Decode and play audio
+                        await playAudio(part.inlineData.data);
+                    } else if (part.text) {
+                        // Handle text response
+                        textResponse += part.text;
+                    }
+                }
+
+                // Display text response if any
+                if (textResponse) {
+                    addMessage('assistant', textResponse);
+                }
+            }
+
+            if (message.serverContent?.modelTurn?.turnComplete) {
+                console.log('Model finished speaking');
+            }
+        }
+
+        // Send text message
+        window.sendTextMessage = async function() {
+            const textInput = document.getElementById('textInput');
+            const message = textInput.value.trim();
+
+            if (!message || !geminiSession) return;
+
+            try {
+                // Add user message to UI
+                addMessage('user', message);
+                textInput.value = '';
+
+                // Send text to Gemini
+                await geminiSession.sendRealtimeInput({
+                    clientContent: {
+                        turns: [{
+                            role: 'user',
+                            parts: [{ text: message }]
+                        }]
+                    }
+                });
+            } catch (error) {
+                console.error('Error sending text message:', error);
+                showError(`Error sending message: ${error.message}`);
+            }
+        };
+
+        // Handle Enter key in text input
+        window.handleTextKeyPress = function(event) {
+            if (event.key === 'Enter') {
+                sendTextMessage();
+            }
+        };
+
+        // Add message to messages display
+        function addMessage(role, text) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.textContent = text;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Play audio response
+        async function playAudio(base64Data) {
+            if (!outputAudioContext) return;
+
+            try {
+                // Decode base64 to ArrayBuffer
+                const binaryString = atob(base64Data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                // Convert to Float32Array
+                const audioData = new Int16Array(bytes.buffer);
+                const floatData = new Float32Array(audioData.length);
+                for (let i = 0; i < audioData.length; i++) {
+                    floatData[i] = audioData[i] / 0x7FFF;
+                }
+
+                // Create audio buffer and play
+                const audioBuffer = outputAudioContext.createBuffer(1, floatData.length, OUTPUT_SAMPLE_RATE);
+                audioBuffer.getChannelData(0).set(floatData);
+
+                const source = outputAudioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(outputAudioContext.destination);
+                source.start();
+            } catch (error) {
+                console.error('Error playing audio:', error);
+            }
+        }
+
+        // Stop audio call
+        window.stopCall = function() {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const textInput = document.getElementById('textInput');
+            const sendTextBtn = document.getElementById('sendTextBtn');
+
+            // Stop video frame capture
+            if (videoFrameInterval) {
+                clearInterval(videoFrameInterval);
+                videoFrameInterval = null;
+            }
+
+            // Stop video preview
+            const videoPreview = document.getElementById('videoPreview');
+            if (videoPreview && videoPreview.srcObject) {
+                videoPreview.srcObject.getTracks().forEach(track => track.stop());
+                videoPreview.srcObject = null;
+            }
+
+            // Stop audio streaming
+            if (scriptProcessor) {
+                scriptProcessor.disconnect();
+                scriptProcessor = null;
+            }
+            if (mediaStreamSource) {
+                mediaStreamSource.disconnect();
+                mediaStreamSource = null;
+            }
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+
+            // Close Gemini session
+            if (geminiSession) {
+                geminiSession.close();
+                geminiSession = null;
+            }
+
+            // Close audio contexts
+            if (inputAudioContext) {
+                inputAudioContext.close();
+                inputAudioContext = null;
+            }
+            if (outputAudioContext) {
+                outputAudioContext.close();
+                outputAudioContext = null;
+            }
+
+            // Reset UI
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            textInput.disabled = true;
+            sendTextBtn.disabled = true;
+            updateStatus('Disconnected', 'disconnected');
+            addMessage('system', 'Disconnected from Gemini.');
+        };
+
+        // Update status
+        function updateStatus(message, className) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${className}`;
+        }
+
+        // Show error
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
+
