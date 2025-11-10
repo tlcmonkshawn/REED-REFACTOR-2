@@ -22,7 +22,9 @@ const healthRoutes = require('./routes/health');
 const bootiesRoutes = require('./routes/booties');
 const locationsRoutes = require('./routes/locations');
 const usersRoutes = require('./routes/users');
+const geminiRoutes = require('./routes/gemini');
 
+app.use('/api/v1/gemini', geminiRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/locations', locationsRoutes);
 app.use('/api/v1/booties', bootiesRoutes);
