@@ -1,10 +1,14 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors'); // Import cors
 const pool = require('./models/db');
 const AuditLogger = require('./audit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Enable CORS for all routes - MUST be first
+app.use(cors()); 
 
 // Initialize audit logger
 const auditLogger = new AuditLogger(pool);
