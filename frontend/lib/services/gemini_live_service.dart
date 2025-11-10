@@ -1,81 +1,68 @@
-import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'dart:convert';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:frontend/services/api_service.dart';
 
 class GeminiLiveService {
-  RTCPeerConnection? _peerConnection;
-  MediaStream? _localStream;
-  final Function(MediaStream) onAddStream;
-  late IO.Socket _socket;
+  final ApiService apiService;
+  WebSocketChannel? _channel;
+  Function(String)? _onTranscript;
 
-  GeminiLiveService({required this.onAddStream}) {
-    _socket = IO.io('https://reed-refactor-2.onrender.com', <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': false,
-    });
-    _connectSocket();
+  GeminiLiveService({required this.apiService});
+
+  Future<Map<String, dynamic>> createSession() async {
+    final response = await apiService.post('/gemini/session');
+    if (response.statusCode == 200) {
+      return {
+        'session_token': response.data['session_token'] as String?,
+        'session_name': response.data['session_name'] as String?,
+      };
+    }
+    throw Exception('Failed to create Gemini Live session');
   }
 
-  void _connectSocket() {
-    _socket.connect();
-    _socket.on('connect', (_) {
-      print('socket connected');
-    });
+  Future<void> connect({
+    required String sessionToken,
+    String? sessionName,
+    Function(String)? onTranscript,
+  }) async {
+    _onTranscript = onTranscript;
+    String cleanSessionName = sessionName?.replaceFirst('sessions/', '') ?? '';
+    final wsUrl = 'wss://generativelanguage.googleapis.com/ws/v1beta/sessions/$cleanSessionName/streamGenerateContent?key=${Uri.encodeComponent(sessionToken)}';
+    final uri = Uri.parse(wsUrl);
+    _channel = WebSocketChannel.connect(uri);
 
-    _socket.on('webrtc_offer', (data) async {
-      await _peerConnection?.setRemoteDescription(RTCSessionDescription(data['sdp'], data['type']));
-      RTCSessionDescription answer = await _peerConnection!.createAnswer();
-      await _peerConnection!.setLocalDescription(answer);
-      _socket.emit('webrtc_answer', {'sdp': answer.sdp, 'type': answer.type});
-    });
-
-    _socket.on('webrtc_answer', (data) {
-      _peerConnection?.setRemoteDescription(RTCSessionDescription(data['sdp'], data['type']));
-    });
-
-    _socket.on('webrtc_ice_candidate', (data) {
-      _peerConnection?.addCandidate(RTCIceCandidate(data['candidate'], data['sdpMid'], data['sdpMLineIndex']));
+    _channel!.stream.listen((data) {
+      _handleMessage(data);
     });
   }
 
-  Future<void> start() async {
-    final Map<String, dynamic> configuration = {
-      'iceServers': [
-        {'url': 'stun:stun.l.google.com:19302'},
-      ]
-    };
-    _peerConnection = await createPeerConnection(configuration);
-
-    _localStream = await navigator.mediaDevices.getUserMedia({
-      'audio': true,
-      'video': true,
-    });
-
-    _localStream!.getTracks().forEach((track) {
-      _peerConnection!.addTrack(track, _localStream!);
-    });
-
-    _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
-      _socket.emit('webrtc_ice_candidate', {
-        'candidate': candidate.candidate,
-        'sdpMid': candidate.sdpMid,
-        'sdpMLineIndex': candidate.sdpMLineIndex,
-      });
-    };
-
-    _peerConnection!.onTrack = (RTCTrackEvent event) {
-      if (event.streams.isNotEmpty) {
-        onAddStream(event.streams[0]);
+  void _handleMessage(dynamic data) {
+    final message = jsonDecode(data.toString()) as Map<String, dynamic>;
+    if (message.containsKey('candidates')) {
+      final candidates = message['candidates'] as List<dynamic>?;
+      if (candidates != null && candidates.isNotEmpty) {
+        final content = candidates[0]['content'] as Map<String, dynamic>;
+        final parts = content['parts'] as List<dynamic>?;
+        if (parts != null && parts.isNotEmpty) {
+          final text = parts[0]['text'] as String?;
+          if (text != null && _onTranscript != null) {
+            _onTranscript!(text);
+          }
+        }
       }
-    };
-
-    RTCSessionDescription offer = await _peerConnection!.createOffer();
-    await _peerConnection!.setLocalDescription(offer);
-    _socket.emit('webrtc_offer', {'sdp': offer.sdp, 'type': offer.type});
+    }
   }
 
-  void dispose() {
-    _socket.disconnect();
-    _peerConnection?.close();
-    _localStream?.dispose();
+  Future<void> sendAudio(List<int> audioData) async {
+    if (_channel == null) return;
+    final base64Audio = base64Encode(audioData);
+    final message = {
+      'audio': {'content': base64Audio}
+    };
+    _channel!.sink.add(jsonEncode(message));
+  }
+
+  void disconnect() {
+    _channel?.sink.close();
   }
 }

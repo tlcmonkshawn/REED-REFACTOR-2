@@ -35,7 +35,6 @@ dependencies:
   permission_handler: ^11.1.0
 
   # WebRTC
-  flutter_webrtc: ^0.9.23
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:camera/camera.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import 'package:frontend/services/gemini_live_service.dart';
+import 'package:frontend/providers/auth_provider.dart';
 
 class CallScreen extends StatefulWidget {
   const CallScreen({super.key});
@@ -10,48 +14,63 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
+  CameraController? _cameraController;
+  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
   late final GeminiLiveService _geminiLiveService;
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-  bool _inCall = false;
+  bool _isInitialized = false;
+  bool _isRecording = false;
+  String _transcription = '';
 
   @override
   void initState() {
     super.initState();
-    _geminiLiveService = GeminiLiveService(onAddStream: _onAddStream);
-    _initRenderers();
+    _geminiLiveService = GeminiLiveService(apiService: context.read<AuthProvider>().authService.apiService);
+    _init();
   }
 
-  void _initRenderers() async {
-    await _localRenderer.initialize();
-    await _remoteRenderer.initialize();
+  Future<void> _init() async {
+    await Permission.camera.request();
+    await Permission.microphone.request();
+
+    final cameras = await availableCameras();
+    _cameraController = CameraController(cameras.first, ResolutionPreset.medium);
+    await _cameraController!.initialize();
+    await _recorder.openRecorder();
+    
+    setState(() => _isInitialized = true);
   }
 
-  void _onAddStream(MediaStream stream) {
-    _remoteRenderer.srcObject = stream;
-    setState(() {});
-  }
-
-  void _toggleCall() {
-    if (_inCall) {
-      _geminiLiveService.dispose();
-      _localRenderer.srcObject = null;
-      _remoteRenderer.srcObject = null;
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      await _recorder.stopRecorder();
+      _geminiLiveService.disconnect();
+      setState(() => _isRecording = false);
     } else {
-      _geminiLiveService.start().then((_) {
-        _localRenderer.srcObject = _geminiLiveService._localStream;
-      });
+      final sessionData = await _geminiLiveService.createSession();
+      await _geminiLiveService.connect(
+        sessionToken: sessionData['session_token']!,
+        sessionName: sessionData['session_name'],
+        onTranscript: (transcript) {
+          setState(() => _transcription += transcript);
+        },
+      );
+      // This is a conceptual implementation of streaming audio.
+      // A more robust solution would use a stream adapter.
+      await _recorder.startRecorder(
+        codec: Codec.pcm16,
+        toStream: (buffer) {
+          _geminiLiveService.sendAudio(buffer);
+        },
+      );
+      setState(() => _isRecording = true);
     }
-    setState(() {
-      _inCall = !_inCall;
-    });
   }
 
   @override
   void dispose() {
-    _localRenderer.dispose();
-    _remoteRenderer.dispose();
-    _geminiLiveService.dispose();
+    _cameraController?.dispose();
+    _recorder.closeRecorder();
+    _geminiLiveService.disconnect();
     super.dispose();
   }
 
@@ -59,32 +78,17 @@ class _CallScreenState extends State<CallScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Live Scanner')),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
+      body: _isInitialized
+          ? Column(
               children: [
-                RTCVideoView(_localRenderer, mirror: true),
-                Positioned(
-                  right: 20,
-                  top: 20,
-                  child: SizedBox(
-                    width: 120,
-                    height: 160,
-                    child: RTCVideoView(_remoteRenderer),
-                  ),
-                ),
+                Expanded(child: CameraPreview(_cameraController!)),
+                Text(_transcription, style: const TextStyle(color: Colors.white)),
               ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: FloatingActionButton(
-              onPressed: _toggleCall,
-              child: Icon(_inCall ? Icons.call_end : Icons.call),
-            ),
-          ),
-        ],
+            )
+          : const Center(child: CircularProgressIndicator()),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _toggleRecording,
+        child: Icon(_isRecording ? Icons.mic_off : Icons.mic),
       ),
     );
   }
