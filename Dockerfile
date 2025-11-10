@@ -12,6 +12,8 @@ RUN apk add --no-cache postgresql postgresql-contrib openssh-server shadow su-ex
     chmod 0700 /home/node/.ssh && \
     chown -R node:node /home/node/.ssh && \
     mkdir -p /var/lib/postgresql/data && \
+    addgroup -g 70 -S postgres 2>/dev/null || true && \
+    adduser -u 70 -S -D -H -h /var/lib/postgresql -s /bin/sh -G postgres postgres 2>/dev/null || true && \
     chown -R postgres:postgres /var/lib/postgresql/data
 
 # Ensure node user has shell access (required for SSH)
