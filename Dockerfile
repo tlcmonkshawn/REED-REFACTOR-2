@@ -6,11 +6,14 @@
 
 FROM node:20-alpine
 
-# Install openssh-server for SSH access (required for Render SSH)
-RUN apk add --no-cache openssh-server && \
+# Install openssh-server and shadow (for usermod) for SSH access (required for Render SSH)
+RUN apk add --no-cache openssh-server shadow && \
     mkdir -p /home/node/.ssh && \
     chmod 0700 /home/node/.ssh && \
     chown -R node:node /home/node/.ssh
+
+# Ensure node user has shell access (required for SSH)
+RUN usermod -s /bin/sh node
 
 # Set working directory
 WORKDIR /app
