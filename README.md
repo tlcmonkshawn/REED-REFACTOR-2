@@ -76,3 +76,56 @@ docker-compose up --build
 3. Select "Web Service"
 4. Render will detect Docker and deploy automatically
 
+## Database API
+
+The project includes PostgreSQL database with REST API routes for external access.
+
+### Database Information
+- **Type**: PostgreSQL
+- **Database**: `reed_refactor_2`
+- **User**: `reed_user`
+- **Port**: 5432 (internal)
+
+### API Endpoints
+
+All endpoints are available at: `https://reed-refactor-2.onrender.com/api/items`
+
+#### GET /api/items
+Get all items
+```bash
+curl https://reed-refactor-2.onrender.com/api/items
+```
+
+#### GET /api/items/:id
+Get a specific item by ID
+```bash
+curl https://reed-refactor-2.onrender.com/api/items/1
+```
+
+#### POST /api/items
+Create a new item
+```bash
+curl -X POST https://reed-refactor-2.onrender.com/api/items \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test Item", "description": "This is a test"}'
+```
+
+#### PUT /api/items/:id
+Update an existing item
+```bash
+curl -X PUT https://reed-refactor-2.onrender.com/api/items/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Updated Item", "description": "Updated description"}'
+```
+
+#### DELETE /api/items/:id
+Delete an item
+```bash
+curl -X DELETE https://reed-refactor-2.onrender.com/api/items/1
+```
+
+### Health Check
+```bash
+curl https://reed-refactor-2.onrender.com/health
+```
+
