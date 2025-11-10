@@ -1,8 +1,11 @@
 import 'package:frontend/services/api_service.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'dart:convert';
 
 class GeminiLiveService {
   final String? authToken;
   final ApiService _apiService = ApiService();
+  WebSocketChannel? _channel;
 
   GeminiLiveService({this.authToken});
 
@@ -23,5 +26,24 @@ class GeminiLiveService {
     }
   }
 
-  // WebSocket connection logic will be added here
+  void connect(Function(String) onMessageReceived) {
+    // The Gemini Live API URL will be provided by Google
+    // This is a placeholder URL
+    final uri = Uri.parse('wss://your-gemini-live-api-endpoint.googleapis.com');
+    _channel = WebSocketChannel.connect(uri);
+
+    _channel!.stream.listen((message) {
+      final decodedMessage = jsonDecode(message);
+      // Assuming the transcription is in a 'text' field
+      onMessageReceived(decodedMessage['text'] ?? '');
+    });
+  }
+
+  void sendAudio(List<int> audioData) {
+    _channel?.sink.add(audioData);
+  }
+
+  void close() {
+    _channel?.sink.close();
+  }
 }
