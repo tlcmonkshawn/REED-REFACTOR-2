@@ -17,10 +17,21 @@ app.set('auditLogger', auditLogger);
 
 
 // Routes
-const itemsRoutes = require('./routes/items');
+const authRoutes = require('./routes/auth');
 const healthRoutes = require('./routes/health');
+const bootiesRoutes = require('./routes/booties');
+const locationsRoutes = require('./routes/locations');
+const usersRoutes = require('./routes/users');
 
+app.use('/api/v1/users', usersRoutes);
+app.use('/api/v1/locations', locationsRoutes);
+app.use('/api/v1/booties', bootiesRoutes);
+app.use('/api/v1/auth', authRoutes);
+
+// Deprecated scaffolding routes - to be removed
+const itemsRoutes = require('./routes/items');
 app.use('/api/items', itemsRoutes);
+
 app.use('/', healthRoutes);
 
 
