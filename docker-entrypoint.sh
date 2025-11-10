@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+# Create /run/postgresql directory for PostgreSQL lock files
+echo "Creating PostgreSQL runtime directory..."
+mkdir -p /run/postgresql
+chown postgres:postgres /run/postgresql
+
 # Initialize PostgreSQL data directory if it's empty
 if [ -z "$(ls -A /var/lib/postgresql/data 2>/dev/null)" ]; then
     echo "Initializing PostgreSQL database..."
