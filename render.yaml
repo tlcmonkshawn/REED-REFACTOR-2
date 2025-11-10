@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: reed-refactor-2
+    runtime: docker
+    plan: starter
+    region: oregon
+    buildCommand: ""
+    startCommand: ""
+    envVars:
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /health
+
