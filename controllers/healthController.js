@@ -264,29 +264,39 @@ exports.getHealthHtml = async (req, res) => {
                           <div class="desc">This health dashboard page</div>
                       </div>
                       <div class="endpoint">
-                          <span class="method get">GET</span>
-                          <span class="path">/api/items</span>
-                          <div class="desc">Get all items from database</div>
-                      </div>
-                      <div class="endpoint">
-                          <span class="method get">GET</span>
-                          <span class="path">/api/items/:id</span>
-                          <div class="desc">Get a specific item by ID</div>
+                          <span class="method post">POST</span>
+                          <span class="path">/api/v1/auth/register</span>
+                          <div class="desc">Register a new user</div>
                       </div>
                       <div class="endpoint">
                           <span class="method post">POST</span>
-                          <span class="path">/api/items</span>
-                          <div class="desc">Create a new item (requires JSON body with name and description)</div>
+                          <span class="path">/api/v1/auth/login</span>
+                          <div class="desc">Login and receive a JWT</div>
                       </div>
                       <div class="endpoint">
-                          <span class="method put">PUT</span>
-                          <span class="path">/api/items/:id</span>
-                          <div class="desc">Update an existing item (requires JSON body)</div>
+                          <span class="method get">GET</span>
+                          <span class="path">/api/v1/booties</span>
+                          <div class="desc">Get all booties</div>
                       </div>
                       <div class="endpoint">
-                          <span class="method delete">DELETE</span>
-                          <span class="path">/api/items/:id</span>
-                          <div class="desc">Delete an item by ID</div>
+                          <span class="method post">POST</span>
+                          <span class="path">/api/v1/booties</span>
+                          <div class="desc">Create a new bootie (protected)</div>
+                      </div>
+                      <div class="endpoint">
+                          <span class="method get">GET</span>
+                          <span class="path">/api/v1/locations</span>
+                          <div class="desc">Get all locations</div>
+                      </div>
+                      <div class="endpoint">
+                          <span class="method post">POST</span>
+                          <span class="path">/api/v1/locations</span>
+                          <div class="desc">Create a new location (protected)</div>
+                      </div>
+                      <div class="endpoint">
+                          <span class="method get">GET</span>
+                          <span class="path">/api/v1/users/me</span>
+                          <div class="desc">Get current user's profile (protected)</div>
                       </div>
                   </div>
               </div>
