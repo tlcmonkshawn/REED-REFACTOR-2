@@ -6,6 +6,12 @@
 
 FROM node:20-alpine
 
+# Install openssh-server for SSH access (required for Render SSH)
+RUN apk add --no-cache openssh-server && \
+    mkdir -p /home/node/.ssh && \
+    chmod 0700 /home/node/.ssh && \
+    chown -R node:node /home/node/.ssh
+
 # Set working directory
 WORKDIR /app
 
@@ -17,6 +23,12 @@ RUN npm install
 
 # Copy application files
 COPY . .
+
+# Ensure node user owns the app directory
+RUN chown -R node:node /app
+
+# Switch to node user (non-root)
+USER node
 
 # Expose port - Render will set PORT env variable
 EXPOSE ${PORT:-3000}
