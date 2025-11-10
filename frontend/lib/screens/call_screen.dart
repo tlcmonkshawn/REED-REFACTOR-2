@@ -24,6 +24,9 @@ class _CallScreenState extends State<CallScreen> {
   String _transcription = '';
   StreamSubscription? _recorderSubscription;
   final StreamController<Uint8List> _audioStreamController = StreamController<Uint8List>(); // Use Uint8List
+  Timer? _uiUpdateTimer;
+  String _bufferedTranscript = '';
+  bool _isProcessingAudio = false;
 
   @override
   void initState() {
@@ -35,6 +38,23 @@ class _CallScreenState extends State<CallScreen> {
     _recorderSubscription = _audioStreamController.stream.listen((buffer) {
       if (_isRecording) {
         _geminiLiveService.sendAudio(buffer);
+        if (!_isProcessingAudio) {
+          setState(() => _isProcessingAudio = true);
+        }
+      }
+    });
+
+    _uiUpdateTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (_bufferedTranscript.isNotEmpty) {
+        setState(() {
+          _transcription += _bufferedTranscript;
+          _bufferedTranscript = '';
+          _isProcessingAudio = false;
+        });
+      } else if (_isProcessingAudio && _isRecording) {
+        // If still recording but no new transcript, keep processing indicator
+      } else {
+        setState(() => _isProcessingAudio = false);
       }
     });
   }
@@ -62,7 +82,7 @@ class _CallScreenState extends State<CallScreen> {
         sessionToken: sessionData['session_token']!,
         sessionName: sessionData['session_name'],
         onTranscript: (transcript) {
-          setState(() => _transcription += transcript);
+          _bufferedTranscript += transcript;
         },
       );
       
@@ -83,6 +103,7 @@ class _CallScreenState extends State<CallScreen> {
     _geminiLiveService.disconnect();
     _recorderSubscription?.cancel();
     _audioStreamController.close();
+    _uiUpdateTimer?.cancel();
     super.dispose();
   }
 
@@ -93,8 +114,33 @@ class _CallScreenState extends State<CallScreen> {
       body: _isInitialized
           ? Column(
               children: [
-                Expanded(child: CameraPreview(_cameraController!)),
-                Text(_transcription, style: const TextStyle(color: Colors.white)),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      CameraPreview(_cameraController!),
+                      if (_isProcessingAudio)
+                        const Positioned.fill(
+                          child: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(12.0),
+                          color: Colors.black.withOpacity(0.5),
+                          child: Text(
+                            _transcription,
+                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             )
           : const Center(child: CircularProgressIndicator()),
