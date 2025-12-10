@@ -1,7 +1,11 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// TODO: Move API_KEY to environment variables
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'YOUR_API_KEY_HERE');
+const geminiApiKey = process.env.GEMINI_API_KEY;
+if (!geminiApiKey) {
+    throw new Error('GEMINI_API_KEY environment variable is required. Please set it in your .env file.');
+}
+
+const genAI = new GoogleGenerativeAI(geminiApiKey);
 
 exports.getSessionToken = async (req, res) => {
     try {
@@ -18,8 +22,13 @@ exports.getSessionToken = async (req, res) => {
         // We will simulate the session_name for now.
         const sessionName = `sessions/user-${req.user.id}-${Date.now()}`;
 
+        const geminiApiKey = process.env.GEMINI_API_KEY;
+        if (!geminiApiKey) {
+            return res.status(500).json({ msg: 'Server configuration error: GEMINI_API_KEY not set' });
+        }
+
         res.json({ 
-            session_token: process.env.GEMINI_API_KEY || 'YOUR_API_KEY_HERE',
+            session_token: geminiApiKey,
             session_name: sessionName,
             expires_at: new Date(Date.now() + 3600 * 1000).toISOString() // Token valid for 1 hour
         });

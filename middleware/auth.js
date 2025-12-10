@@ -11,8 +11,11 @@ module.exports = function(req, res, next) {
 
     // Verify token
     try {
-        // TODO: Move JWT_SECRET to environment variables
-        const decoded = jwt.verify(token, 'supersecretjwtkey');
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            return res.status(500).json({ msg: 'Server configuration error: JWT_SECRET not set' });
+        }
+        const decoded = jwt.verify(token, jwtSecret);
         req.user = decoded.user;
         next();
     } catch (err) {
