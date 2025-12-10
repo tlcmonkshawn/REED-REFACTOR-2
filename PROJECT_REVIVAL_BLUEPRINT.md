@@ -531,17 +531,24 @@ But always: **Document the deviation and why** in `/docs/ARCHITECTURE_DECISIONS.
   - [x] Added environment variable validation on startup
   - [x] Created `.env.example` documentation
   - [x] Committed changes (commit: `28c1676`)
-- [ ] Component 3: Test-Driven Recovery (Not Started) ⚠️ **NEXT PRIORITY**
+- [x] Component 3: Test-Driven Recovery ✅ **IN PROGRESS** (2025-01-09)
+  - [x] ESLint configured (v9 flat config format)
+  - [x] Jest testing framework configured
+  - [x] Test infrastructure setup complete
+  - [x] Auth controller tests written (9 test cases, all passing)
+  - [ ] Booties controller tests (pending)
+  - [ ] Health controller tests (pending)
 - [ ] Component 4: Architecture Clarification (Not Started)
 - [ ] Component 5: Zero-Stale-Branch Policy (Not Started)
-- [ ] ESLint Configuration (Not Started)
-- [ ] Jest Configuration (Not Started)
+- [x] ESLint Configuration ✅ **COMPLETE** (2025-01-09)
+- [x] Jest Configuration ✅ **COMPLETE** (2025-01-09)
 - [ ] Husky Hooks (Not Started)
 - [ ] CI/CD Workflow (Not Started)
 
 **Last Updated:** 2025-01-09  
-**Last Commit:** `28c1676` - Security fixes committed  
-**Next Review:** After Component 3 (Test-Driven Recovery) completion
+**Last Commit:** `e458d71` - ESLint v9 config + test infrastructure  
+**Progress:** Component 3 Phase 1 complete (ESLint + Jest + Auth tests)  
+**Next Review:** After Component 3 Phase 2 (Booties & Health tests)
 
 ---
 
