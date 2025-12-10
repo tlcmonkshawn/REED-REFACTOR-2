@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # Run ESLint on staged files
 npx eslint --fix --quiet $(git diff --cached --name-only --diff-filter=ACM | grep '\.js$' | grep -v node_modules | grep -v 'REED REFACTOR 2' | grep -v 'frontend/build' || true)
 
