@@ -540,7 +540,13 @@ But always: **Document the deviation and why** in `/docs/ARCHITECTURE_DECISIONS.
   - [x] Health controller tests written (6 test cases, all passing)
   - [x] Husky pre-commit hooks configured
   - [x] Total: 28 test cases, 100% pass rate
-- [ ] Component 4: Architecture Clarification (Not Started)
+- [x] Component 4: Architecture Clarification ✅ **COMPLETE** (2025-01-09)
+  - [x] Analyzed frontend directory structure
+  - [x] Documented architecture decisions (5 ADRs)
+  - [x] Identified `/ARC/frontend/` as canonical
+  - [x] Marked `/frontend/` as deprecated
+  - [x] Updated README.md with structure clarification
+  - [x] Resolved Root Cause #3 (architectural confusion)
 - [ ] Component 5: Zero-Stale-Branch Policy (Not Started)
 - [x] ESLint Configuration ✅ **COMPLETE** (2025-01-09)
 - [x] Jest Configuration ✅ **COMPLETE** (2025-01-09)
@@ -548,9 +554,9 @@ But always: **Document the deviation and why** in `/docs/ARCHITECTURE_DECISIONS.
 - [ ] CI/CD Workflow (Not Started)
 
 **Last Updated:** 2025-01-09  
-**Last Commit:** Latest - Component 3 complete (28 tests, Husky hooks)  
-**Progress:** Component 3 COMPLETE - All quality gates in place  
-**Next Review:** Component 4 (Architecture Clarification) or Component 5 (Zero-Stale-Branch)
+**Last Commit:** Latest - Component 4 complete (Architecture decisions documented)  
+**Progress:** Components 2, 3, 4 COMPLETE - Quality gates + Architecture clarity  
+**Next Review:** Component 5 (Zero-Stale-Branch Policy) or CI/CD setup
 
 ---
 
