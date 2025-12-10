@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run ESLint on staged files
+npx eslint --fix --quiet $(git diff --cached --name-only --diff-filter=ACM | grep '\.js$' | grep -v node_modules | grep -v 'REED REFACTOR 2' | grep -v 'frontend/build' || true)
+
+# Run tests before commit (only if test files exist)
+if [ -d "__tests__" ] && [ "$(find __tests__ -name '*.test.js' | wc -l)" -gt 0 ]; then
+  npm test -- --passWithNoTests
+fi
