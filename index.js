@@ -2,6 +2,11 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
+const validateEnv = require('./utils/env-validator');
+
+// Validate environment variables on startup
+validateEnv();
+
 const pool = require('./models/db');
 const AuditLogger = require('./audit');
 

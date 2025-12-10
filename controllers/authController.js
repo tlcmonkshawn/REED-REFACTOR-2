@@ -70,8 +70,12 @@ exports.login = async (req, res) => {
             }
         };
 
-        // TODO: Move JWT_SECRET to environment variables
-        jwt.sign(payload, 'supersecretjwtkey', { expiresIn: 3600 }, (err, token) => {
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) {
+            return res.status(500).json({ msg: 'Server configuration error: JWT_SECRET not set' });
+        }
+
+        jwt.sign(payload, jwtSecret, { expiresIn: 3600 }, (err, token) => {
             if (err) throw err;
             res.json({
                 token,
