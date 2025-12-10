@@ -1,5 +1,15 @@
 # REED REFACTOR 2
 
+## Project Structure
+
+**Important:** This project has two frontend directories. The canonical frontend is located at `/ARC/frontend/`.
+
+- **Backend:** Node.js/Express (`/controllers/`, `/routes/`, `/models/`)
+- **Frontend (Canonical):** Flutter app at `/ARC/frontend/` (see [Architecture Decisions](./docs/ARCHITECTURE_DECISIONS.md))
+- **Frontend (Deprecated):** `/frontend/` - Minimal/outdated version (see ADR-001)
+
+For frontend development, work in `/ARC/frontend/`. See `/ARC/frontend/README.md` for frontend-specific documentation.
+
 ## Docker Setup
 
 ### Build and Run Locally
